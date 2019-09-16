@@ -246,9 +246,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85f1b8160774814c8673b42d454d40d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardRows: 20
-  boardColumns: 0
-  minRoomSize: 6
-  maxRoomSize: 10
-  floorTile: {fileID: 5226118954354527374, guid: 567c4c3e089fbc6488ec4bb28aa27090,
+  boardRows: 64
+  boardColumns: 64
+  minRoomSize: 12
+  maxRoomSize: 20
+  floorTile: {fileID: 2848424354076527083, guid: 24dbe186757522942b713a05bec5791d,
+    type: 3}
+  corridorTile: {fileID: 3248055037614957435, guid: 7930eef14bb81ba498c5077d6e95f978,
     type: 3}
