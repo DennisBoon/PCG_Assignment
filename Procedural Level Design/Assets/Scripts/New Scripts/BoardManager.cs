@@ -6,18 +6,19 @@ public class BoardManager : MonoBehaviour
 {
     public int boardRows, boardColumns;
     public int minRoomSize, maxRoomSize;
-    public GameObject floorTile;
-    public GameObject corridorTile;
+    public GameObject floorTile, corridorTile, wallTile;
     private GameObject[,] boardPositionsFloor;
+    public GameObject player, sword, key, door, enemy, flag;
+    private bool playerSpawned = false, swordSpawned = false, keySpawned = false,
+        doorSpawned = false, enemySpawned = false, flagSpawned = false;
 
     public class SubDungeon
     {
         public SubDungeon left, right;
         public Rect rect;
-        public Rect room = new Rect(-1, -1, 0, 0); // i.e null
+        public Rect room = new Rect(-1, -1, 0, 0);
         public int debugId;
         public List<Rect> corridors = new List<Rect>();
-
         private static int debugCounter = 0;
 
         public SubDungeon(Rect mrect)
@@ -39,9 +40,6 @@ public class BoardManager : MonoBehaviour
                 return false;
             }
 
-            // choose a vertical or horizontal split depending on the proportions
-            // i.e. if too wide split vertically, or too long horizontally, 
-            // or if nearly square choose vertical or horizontal at random
             bool splitH;
             if (rect.width / rect.height >= 1.25)
             {
@@ -64,8 +62,6 @@ public class BoardManager : MonoBehaviour
 
             if (splitH)
             {
-                // split so that the resulting sub-dungeons widths are not too small
-                // (since we are splitting horizontally) 
                 int split = Random.Range(minRoomSize, (int)(rect.width - minRoomSize));
 
                 left = new SubDungeon(new Rect(rect.x, rect.y, rect.width, split));
@@ -105,7 +101,6 @@ public class BoardManager : MonoBehaviour
                 int roomX = (int)Random.Range(1, rect.width - roomWidth - 1);
                 int roomY = (int)Random.Range(1, rect.height - roomHeight - 1);
 
-                // room position will be absolute in the board, not relative to the sub-dungeon
                 room = new Rect(rect.x + roomX, rect.y + roomY, roomWidth, roomHeight);
                 Debug.Log("Created room " + room + " in sub-dungeon " + debugId + " " + rect);
             }
@@ -119,11 +114,9 @@ public class BoardManager : MonoBehaviour
 
             Debug.Log("Creating corridor(s) between " + left.debugId + "(" + lroom + ") and " + right.debugId + " (" + rroom + ")");
 
-            // attach the corridor to a random point in each room
             Vector2 lpoint = new Vector2((int)Random.Range(lroom.x + 1, lroom.xMax - 1), (int)Random.Range(lroom.y + 1, lroom.yMax - 1));
             Vector2 rpoint = new Vector2((int)Random.Range(rroom.x + 1, rroom.xMax - 1), (int)Random.Range(rroom.y + 1, rroom.yMax - 1));
 
-            // always be sure that left point is on the left to simplify the code
             if (lpoint.x > rpoint.x)
             {
                 Vector2 temp = lpoint;
@@ -136,17 +129,12 @@ public class BoardManager : MonoBehaviour
 
             Debug.Log("lpoint: " + lpoint + ", rpoint: " + rpoint + ", w: " + w + ", h: " + h);
 
-            // if the points are not aligned horizontally
             if (w != 0)
             {
-                // choose at random to go horizontal then vertical or the opposite
                 if (Random.Range(0, 1) > 2)
                 {
-                    // add a corridor to the right
                     corridors.Add(new Rect(lpoint.x, lpoint.y, Mathf.Abs(w) + 1, 1));
 
-                    // if left point is below right point go up
-                    // otherwise go down
                     if (h < 0)
                     {
                         corridors.Add(new Rect(rpoint.x, lpoint.y, 1, Mathf.Abs(h)));
@@ -158,7 +146,6 @@ public class BoardManager : MonoBehaviour
                 }
                 else
                 {
-                    // go up or down
                     if (h < 0)
                     {
                         corridors.Add(new Rect(lpoint.x, lpoint.y, 1, Mathf.Abs(h)));
@@ -168,14 +155,11 @@ public class BoardManager : MonoBehaviour
                         corridors.Add(new Rect(lpoint.x, rpoint.y, 1, Mathf.Abs(h)));
                     }
 
-                    // then go right
                     corridors.Add(new Rect(lpoint.x, rpoint.y, Mathf.Abs(w) + 1, 1));
                 }
             }
             else
             {
-                // if the points are aligned horizontally
-                // go up or down depending on the positions
                 if (h < 0)
                 {
                     corridors.Add(new Rect((int)lpoint.x, (int)lpoint.y, 1, Mathf.Abs(h)));
@@ -216,19 +200,15 @@ public class BoardManager : MonoBehaviour
                 }
             }
 
-            // workaround non nullable structs
             return new Rect(-1, -1, 0, 0);
         }
     }
-
-
 
     public void CreateBSP(SubDungeon subDungeon)
     {
         Debug.Log("Splitting sub-dungeon " + subDungeon.debugId + ": " + subDungeon.rect);
         if (subDungeon.IAmLeaf())
         {
-            // if the sub-dungeon is too large split it
             if (subDungeon.rect.width > maxRoomSize
                 || subDungeon.rect.height > maxRoomSize
                 || Random.Range(0.0f, 1.0f) > 0.25)
@@ -262,6 +242,36 @@ public class BoardManager : MonoBehaviour
                     GameObject instance = Instantiate(floorTile, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
                     instance.transform.SetParent(transform);
                     boardPositionsFloor[i, j] = instance;
+                    if (j == 5 && playerSpawned == false)
+                    {
+                        GameObject pObj = Instantiate(player, new Vector3(i + 3, j, 0f), Quaternion.identity) as GameObject;
+                        playerSpawned = true;
+                        boardPositionsFloor[i, j] = pObj;
+                    }
+                    if (j == 7 && swordSpawned == false)
+                    {
+                        GameObject sObj = Instantiate(sword, new Vector3(i + 3, j, 0f), Quaternion.identity) as GameObject;
+                        swordSpawned = true;
+                        boardPositionsFloor[i, j] = sObj;
+                    }
+                    if (j == 30 && keySpawned == false)
+                    {
+                        GameObject kObj = Instantiate(key, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
+                        keySpawned = true;
+                        boardPositionsFloor[i, j] = kObj;
+                    }
+                    if (j == 32 && enemySpawned == false)
+                    {
+                        GameObject eObj = Instantiate(enemy, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
+                        enemySpawned = true;
+                        boardPositionsFloor[i, j] = eObj;
+                    }
+                    if (j >= 55 && flagSpawned == false)
+                    {
+                        GameObject fObj = Instantiate(flag, new Vector3(i + 5, j, 0f), Quaternion.identity) as GameObject;
+                        flagSpawned = true;
+                        boardPositionsFloor[i, j] = fObj;
+                    }
                 }
             }
         }
@@ -293,6 +303,37 @@ public class BoardManager : MonoBehaviour
                         GameObject instance = Instantiate(corridorTile, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
                         instance.transform.SetParent(transform);
                         boardPositionsFloor[i, j] = instance;
+                        if (instance.transform.position == floorTile.transform.position)
+                        {
+                            Destroy(instance);
+                        }
+                        if (j > 40 && doorSpawned == false)
+                        {
+                            GameObject dObj = Instantiate(door, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
+                            doorSpawned = true;
+                            boardPositionsFloor[i, j] = dObj;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void DrawWalls()
+    {
+        for (int i = 0; i < boardRows; i++)
+        {
+            for (int j = 0; j < boardColumns; j++)
+            {
+                if (boardPositionsFloor[i, j] == null)
+                {
+                    GameObject instance = Instantiate(wallTile, new Vector3(i, j, 0f), Quaternion.identity) as GameObject;
+                    instance.transform.SetParent(transform);
+                    boardPositionsFloor[i, j] = instance;
+                    if (instance.transform.position == corridorTile.transform.position ||
+                        instance.transform.position == floorTile.transform.position)
+                    {
+                        Destroy(instance);
                     }
                 }
             }
@@ -308,5 +349,6 @@ public class BoardManager : MonoBehaviour
         boardPositionsFloor = new GameObject[boardRows, boardColumns];
         DrawRooms(rootSubDungeon);
         DrawCorridors(rootSubDungeon);
+        DrawWalls();
     }
 }
